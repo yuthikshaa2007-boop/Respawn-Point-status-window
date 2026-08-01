@@ -1,0 +1,1509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Status Window // Academic Companion & Teacher Dashboard</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hud: {
+                            bg: '#12141F',
+                            card: '#1A1D2E',
+                            border: '#2A2F4A',
+                            accent: '#7C9EFF',
+                            glow: 'rgba(124, 158, 255, 0.15)',
+                            amber: '#E8A33D',
+                            amberGlow: 'rgba(232, 163, 61, 0.2)',
+                            danger: '#FF5C5C',
+                            success: '#36D399'
+                        },
+                        teacher: {
+                            bg: '#F7F5F0',
+                            card: '#FFFFFF',
+                            border: '#E2E8F0',
+                            text: '#0F172A',
+                            muted: '#64748B',
+                            accent: '#4F46E5'
+                        }
+                    },
+                    fontFamily: {
+                        mono: ['"Space Mono"', 'monospace'],
+                        sans: ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        /* Custom Corner Bracket HUD Styling */
+        .hud-bracket-container {
+            position: relative;
+        }
+        .hud-bracket-container::before, .hud-bracket-container::after {
+            content: '';
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-color: #7C9EFF;
+            pointer-events: none;
+            transition: all 0.3s ease;
+        }
+        .hud-bracket-container::before {
+            top: -2px;
+            left: -2px;
+            border-top: 2px solid #7C9EFF;
+            border-left: 2px solid #7C9EFF;
+        }
+        .hud-bracket-container::after {
+            bottom: -2px;
+            right: -2px;
+            border-bottom: 2px solid #7C9EFF;
+            border-right: 2px solid #7C9EFF;
+        }
+        
+        .amber-bracket::before { border-color: #E8A33D !important; }
+        .amber-bracket::after { border-color: #E8A33D !important; }
+
+        /* Scanning Animation */
+        @keyframes scanline {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(1000%); }
+        }
+        .animate-scan {
+            animation: scanline 3s linear infinite;
+        }
+
+        /* Creature Pulse Animation */
+        @keyframes floatPulse {
+            0%, 100% { transform: translateY(0px) scale(1); }
+            50% { transform: translateY(-6px) scale(1.03); }
+        }
+        .creature-float {
+            animation: floatPulse 4s ease-in-out infinite;
+        }
+
+        @keyframes glowPulse {
+            0%, 100% { filter: drop-shadow(0 0 15px rgba(124, 158, 255, 0.4)); }
+            50% { filter: drop-shadow(0 0 28px rgba(232, 163, 61, 0.7)); }
+        }
+        .creature-glow {
+            animation: glowPulse 3s ease-in-out infinite;
+        }
+
+        /* Option Card Checked Styling */
+        .option-card input:checked + .option-content {
+            border-color: #7C9EFF;
+            background-color: rgba(124, 158, 255, 0.12);
+            box-shadow: 0 0 12px rgba(124, 158, 255, 0.25);
+        }
+        .option-card input:checked + .option-content .radio-dot {
+            border-color: #7C9EFF;
+            background-color: #7C9EFF;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #12141F;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2A2F4A;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #7C9EFF;
+        }
+    </style>
+</head>
+<body class="bg-hud-bg text-gray-100 font-sans min-h-screen transition-colors duration-300" id="appBody">
+
+    <header class="border-b border-hud-border bg-hud-card/80 backdrop-blur-md sticky top-0 z-40 px-4 lg:px-8 py-3 transition-colors duration-300" id="mainHeader">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-3">
+            <!-- Brand & Status -->
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded bg-hud-accent/20 border border-hud-accent flex items-center justify-center text-hud-accent font-mono font-bold text-lg" id="logoIcon">
+                    <i class="fa-solid fa-microchip"></i>
+                </div>
+                <div>
+                    <h1 class="font-mono font-bold text-base sm:text-lg tracking-wider flex items-center gap-2" id="appTitle">
+                        <span>STATUS WINDOW</span>
+                        <span class="text-xs px-2 py-0.5 rounded bg-hud-accent/10 text-hud-accent border border-hud-accent/30 font-sans font-normal" id="subBadge">v1.1 AI-CORE</span>
+                    </h1>
+                    <p class="text-xs text-gray-400 font-mono" id="appTagline">// DIEGETIC ACADEMIC GAP COMPANION</p>
+                </div>
+            </div>
+
+            <!-- Header Action Controls -->
+            <div class="flex items-center gap-2">
+                <button onclick="toggleApiKeyModal()" class="px-3 py-1.5 rounded-md text-xs font-mono transition-all flex items-center gap-1.5 bg-hud-bg border border-hud-border text-gray-300 hover:text-white hover:border-hud-accent">
+                    <i class="fa-solid fa-key text-hud-amber"></i> <span id="apiKeyBtnText">API Key</span>
+                </button>
+
+                <!-- View Switcher Controls -->
+                <div class="flex items-center gap-1 bg-hud-bg p-1 rounded-lg border border-hud-border" id="viewToggleGroup">
+                    <button id="btnStudentView" onclick="switchView('student')" class="px-3.5 py-1.5 rounded-md text-xs font-mono font-semibold transition-all flex items-center gap-2 bg-hud-accent text-hud-bg shadow-sm">
+                        <i class="fa-solid fa-gamepad"></i> STUDENT HUD
+                    </button>
+                    <button id="btnTeacherView" onclick="switchView('teacher')" class="px-3.5 py-1.5 rounded-md text-xs font-mono font-semibold transition-all flex items-center gap-2 text-gray-400 hover:text-white">
+                        <i class="fa-solid fa-chalkboard-user"></i> TEACHER DASHBOARD
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 lg:px-8 py-6">
+
+        <!-- STUDENT HUD VIEW -->
+        <div id="studentView" class="space-y-6">
+            
+            <!-- Top Grid: Companion Status HUD & Gap Input Form -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                <!-- LEFT: Creature Status Display -->
+                <div class="lg:col-span-5 bg-hud-card border border-hud-border p-5 rounded-lg hud-bracket-container amber-bracket shadow-xl flex flex-col justify-between relative overflow-hidden">
+                    <div class="absolute inset-0 bg-[radial-gradient(#2A2F4A_1px,transparent_1px)] [background-size:16px_16px] opacity-20 pointer-events-none"></div>
+
+                    <!-- Header Readout -->
+                    <div class="flex justify-between items-start z-10">
+                        <div>
+                            <span class="text-[10px] font-mono text-hud-accent tracking-widest uppercase block">// ANIMA PROTOCOL STATUS</span>
+                            <h2 class="font-mono text-lg font-bold text-white flex items-center gap-2" id="petName">
+                                NEXUS-01
+                            </h2>
+                        </div>
+                        <span id="stageBadge" class="font-mono text-xs px-2.5 py-1 rounded bg-hud-amberGlow border border-hud-amber text-hud-amber font-semibold">
+                            STAGE: EGG
+                        </span>
+                    </div>
+
+                    <!-- Visual Creature Art Display -->
+                    <div class="my-6 py-6 flex flex-col items-center justify-center relative z-10">
+                        <div class="relative w-44 h-44 flex items-center justify-center">
+                            <div class="absolute inset-0 rounded-full border border-hud-accent/20 animate-ping opacity-30" style="animation-duration: 4s;"></div>
+                            <div class="absolute inset-2 rounded-full border border-dashed border-hud-accent/40 animate-spin" style="animation-duration: 25s;"></div>
+                            
+                            <div id="petArtContainer" class="creature-float creature-glow w-32 h-32 flex items-center justify-center">
+                                <!-- Rendered dynamically by JS -->
+                            </div>
+                        </div>
+
+                        <p id="petBio" class="text-xs text-gray-300 font-mono text-center mt-3 max-w-xs bg-hud-bg/70 px-3 py-1.5 rounded border border-hud-border/50">
+                            A dormant cognitive core awaiting academic resonance to hatch.
+                        </p>
+                    </div>
+
+                    <!-- XP Meter & Evolution Stats -->
+                    <div class="space-y-2 z-10 bg-hud-bg/80 p-3.5 rounded border border-hud-border">
+                        <div class="flex justify-between items-center font-mono text-xs">
+                            <span class="text-gray-400"><i class="fa-solid fa-bolt text-hud-amber mr-1"></i>RESONANCE (XP)</span>
+                            <span class="text-hud-amber font-bold" id="xpTextDisplay">0 / 25 XP</span>
+                        </div>
+                        
+                        <div class="w-full h-3 bg-hud-card rounded-full overflow-hidden border border-hud-border p-0.5">
+                            <div id="xpProgressBar" class="h-full bg-gradient-to-r from-hud-accent via-hud-amber to-amber-400 rounded-full transition-all duration-500 w-0 shadow-[0_0_10px_rgba(232,163,61,0.5)]"></div>
+                        </div>
+
+                        <div class="flex justify-between items-center text-[10px] font-mono text-gray-400 pt-1 border-t border-hud-border/40">
+                            <span>EGG (0)</span>
+                            <span>HATCHLING (25)</span>
+                            <span>ADOLESCENT (75)</span>
+                            <span>EVOLVED (150)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-7 bg-hud-card border border-hud-border p-5 rounded-lg hud-bracket-container flex flex-col justify-between shadow-xl">
+                    <div>
+                        <div class="flex items-center justify-between border-b border-hud-border pb-3 mb-4">
+                            <div>
+                                <h2 class="font-mono text-base font-bold text-white flex items-center gap-2">
+                                    <i class="fa-solid fa-radar text-hud-accent"></i> GAP DETECTION & DUNGEON GENERATOR
+                                </h2>
+                                <p class="text-xs text-gray-400">Target a specific topic or skill gap to synthesize a personalized AI challenge set.</p>
+                            </div>
+                            <span id="engineBadge" class="text-xs font-mono text-hud-accent bg-hud-accent/10 px-2.5 py-1 rounded border border-hud-accent/20 flex items-center gap-1.5">
+                                <i class="fa-solid fa-sparkles"></i> HYBRID AI / OFFLINE
+                            </span>
+                        </div>
+
+                        <form id="weakPointForm" onsubmit="handleGenerateDungeon(event)" class="space-y-4">
+                            <div>
+                                <label for="topicInput" class="block font-mono text-xs text-gray-300 uppercase tracking-wider mb-1">
+                                    Target Subject / Weak Concept <span class="text-hud-danger">*</span>
+                                </label>
+                                <div class="relative">
+                                    <input type="text" id="topicInput" required placeholder="e.g. Quadratic Equations, Photosynthesis, French Verb Conjugation" 
+                                           class="w-full bg-hud-bg border border-hud-border rounded px-3.5 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-hud-accent focus:ring-1 focus:ring-hud-accent transition-all font-sans">
+                                    <i class="fa-solid fa-magnifying-glass absolute right-3.5 top-3 text-gray-500 text-xs"></i>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="scoreInput" class="block font-mono text-xs text-gray-300 uppercase tracking-wider mb-1">
+                                        Recent Quiz Score % <span class="text-gray-500">(Optional)</span>
+                                    </label>
+                                    <input type="number" id="scoreInput" min="0" max="100" placeholder="e.g. 45" 
+                                           class="w-full bg-hud-bg border border-hud-border rounded px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-hud-accent transition-all font-mono">
+                                </div>
+                                <div>
+                                    <label class="block font-mono text-xs text-gray-300 uppercase tracking-wider mb-1">
+                                        Question Count
+                                    </label>
+                                    <select id="questionCountSelect" class="w-full bg-hud-bg border border-hud-border rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-hud-accent font-mono">
+                                        <option value="3">3 Targeted Questions</option>
+                                        <option value="4" selected>4 Targeted Questions</option>
+                                        <option value="5">5 Targeted Questions</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <span class="block font-mono text-[11px] text-gray-400 mb-2">// QUICK SUGGESTED SKILL GAPS:</span>
+                                <div class="flex flex-wrap gap-2">
+                                    <button type="button" onclick="setPresetTopic('Polynomial Factoring', 40)" class="text-xs bg-hud-bg hover:bg-hud-accent/20 text-gray-300 hover:text-hud-accent border border-hud-border hover:border-hud-accent px-2.5 py-1 rounded transition-all font-mono">
+                                        + Polynomial Factoring (40%)
+                                    </button>
+                                    <button type="button" onclick="setPresetTopic('Cellular Respiration & ATP', 52)" class="text-xs bg-hud-bg hover:bg-hud-accent/20 text-gray-300 hover:text-hud-accent border border-hud-border hover:border-hud-accent px-2.5 py-1 rounded transition-all font-mono">
+                                        + Cellular Respiration (52%)
+                                    </button>
+                                    <button type="button" onclick="setPresetTopic('Newton\'s Laws of Motion', 35)" class="text-xs bg-hud-bg hover:bg-hud-accent/20 text-gray-300 hover:text-hud-accent border border-hud-border hover:border-hud-accent px-2.5 py-1 rounded transition-all font-mono">
+                                        + Newton's Laws (35%)
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="pt-2">
+                                <button type="submit" id="btnSummonDungeon" class="w-full bg-hud-accent hover:bg-indigo-400 text-hud-bg font-mono font-bold py-3 px-4 rounded transition-all shadow-[0_0_15px_rgba(124,158,255,0.3)] flex items-center justify-center gap-2">
+                                    <i class="fa-solid fa-wand-magic-sparkles"></i> SYNTHESIZE DUNGEON CHALLENGE
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-t border-hud-border/60 flex items-center justify-between text-xs text-gray-400 font-mono">
+                        <span class="flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-hud-success animate-pulse"></span> SYSTEM READY
+                        </span>
+                        <span>DIFFICULTY: ADAPTIVE REAL-TIME</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <div id="dungeonSection" class="hidden">
+                
+                <!-- Loading State HUD -->
+                <div id="dungeonLoading" class="hidden bg-hud-card border border-hud-accent/40 rounded-lg p-10 text-center relative overflow-hidden hud-bracket-container shadow-2xl">
+                    <div class="max-w-md mx-auto space-y-4">
+                        <div class="w-16 h-16 border-4 border-hud-accent border-t-transparent rounded-full animate-spin mx-auto"></div>
+                        <div class="font-mono space-y-1">
+                            <h3 class="text-hud-accent font-bold text-base tracking-wider uppercase" id="loadingTopicText">SYNTHESIZING DUNGEON...</h3>
+                            <p class="text-xs text-gray-400" id="loadingSubtext">Querying cognitive core to construct targeted challenges...</p>
+                        </div>
+                        <div class="w-full bg-hud-bg h-1.5 rounded-full overflow-hidden border border-hud-border">
+                            <div class="bg-hud-accent h-full w-2/3 animate-pulse"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Dungeon Interface -->
+                <div id="dungeonActive" class="hidden bg-hud-card border border-hud-border rounded-lg p-6 hud-bracket-container shadow-2xl space-y-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-hud-border pb-4 gap-3">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-mono px-2 py-0.5 rounded bg-hud-amber/20 border border-hud-amber text-hud-amber font-semibold">
+                                    ACTIVE DUNGEON
+                                </span>
+                                <h3 class="font-mono font-bold text-lg text-white" id="activeDungeonTitle">Topic Title</h3>
+                            </div>
+                            <p class="text-xs text-gray-400 mt-0.5">Answer all questions to demonstrate mastery and earn resonance XP for your companion.</p>
+                        </div>
+
+                        <div class="font-mono text-xs bg-hud-bg px-3 py-1.5 rounded border border-hud-border flex items-center gap-4">
+                            <span>PROGRESS: <strong class="text-hud-accent" id="questionCounterText">0 / 4</strong></span>
+                            <span>VALUED AT: <strong class="text-hud-amber" id="xpValuedText">+40 XP</strong></span>
+                        </div>
+                    </div>
+
+                    <div id="questionsContainer" class="space-y-6">
+                        <!-- Questions injected dynamically -->
+                    </div>
+
+                    <div class="border-t border-hud-border pt-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <button type="button" onclick="cancelActiveDungeon()" class="text-xs font-mono text-gray-400 hover:text-hud-danger transition-colors flex items-center gap-1">
+                            <i class="fa-solid fa-xmark"></i> ABANDON DUNGEON
+                        </button>
+
+                        <button id="btnSubmitDungeon" onclick="gradeDungeonSubmission()" class="w-full sm:w-auto bg-hud-amber hover:bg-amber-500 text-hud-bg font-mono font-bold py-3 px-8 rounded transition-all shadow-[0_0_15px_rgba(232,163,61,0.4)] flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-check-double"></i> SUBMIT & CLAIM RESONANCE
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Dungeon Completed Results Display -->
+                <div id="dungeonResults" class="hidden bg-hud-card border border-hud-accent/60 rounded-lg p-6 hud-bracket-container amber-bracket shadow-2xl space-y-6">
+                    <div class="text-center max-w-lg mx-auto space-y-3">
+                        <div class="w-14 h-14 rounded-full bg-hud-amber/20 border border-hud-amber text-hud-amber flex items-center justify-center text-2xl mx-auto" id="resultIcon">
+                            <i class="fa-solid fa-trophy"></i>
+                        </div>
+                        <div>
+                            <span class="text-xs font-mono text-hud-accent uppercase tracking-widest">// DUNGEON CLEARED</span>
+                            <h3 class="font-mono text-2xl font-bold text-white" id="resultTitle">MASTERY VERIFIED!</h3>
+                            <p class="text-xs text-gray-300 mt-1" id="resultSubtitle">Your companion absorbed the academic resonance.</p>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4 py-3 bg-hud-bg rounded border border-hud-border font-mono">
+                            <div class="border-r border-hud-border">
+                                <span class="text-[10px] text-gray-400 block uppercase">ACCURACY SCORE</span>
+                                <span class="text-xl font-bold text-white" id="resultScoreText">4 / 4 (100%)</span>
+                            </div>
+                            <div>
+                                <span class="text-[10px] text-gray-400 block uppercase">RESONANCE GAINED</span>
+                                <span class="text-xl font-bold text-hud-amber" id="resultXpText">+40 XP</span>
+                            </div>
+                        </div>
+
+                        <div id="evolutionNotice" class="hidden p-3 rounded bg-hud-amberGlow border border-hud-amber text-hud-amber text-xs font-mono font-bold animate-pulse">
+                            <i class="fa-solid fa-sparkles mr-1"></i> CRITICAL THRESHOLD MET! YOUR COMPANION HAS EVOLVED!
+                        </div>
+                    </div>
+
+                    <!-- Answer Diagnostics Breakdown -->
+                    <div class="border-t border-hud-border/80 pt-5 mt-4 space-y-4">
+                        <h4 class="font-mono text-xs font-bold text-hud-accent uppercase tracking-wider">// DETAILED QUESTION DIAGNOSTICS</h4>
+                        <div id="resultsBreakdownContainer" class="space-y-4">
+                            <!-- Injected breakdown -->
+                        </div>
+                    </div>
+
+                    <div class="pt-2 flex justify-center gap-3">
+                        <button onclick="resetToDungeonInput()" class="bg-hud-accent hover:bg-indigo-400 text-hud-bg font-mono font-bold py-2.5 px-6 rounded transition-all text-xs">
+                            <i class="fa-solid fa-plus mr-1"></i> TARGET ANOTHER GAP
+                        </button>
+                        <button onclick="switchView('teacher')" class="bg-hud-bg hover:bg-hud-border text-gray-200 border border-hud-border font-mono py-2.5 px-5 rounded transition-all text-xs">
+                            <i class="fa-solid fa-chalkboard-user mr-1"></i> VIEW TEACHER DASHBOARD
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="bg-hud-card border border-hud-border rounded-lg p-5">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-mono text-sm font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-clock-rotate-left text-hud-accent"></i> COMPLETED DUNGEON LOG
+                    </h3>
+                    <span class="text-xs text-gray-400 font-mono" id="historyCountText">0 Records</span>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs font-mono">
+                        <thead class="bg-hud-bg text-gray-400 border-b border-hud-border uppercase">
+                            <tr>
+                                <th class="p-3">Topic / Gap</th>
+                                <th class="p-3">Score</th>
+                                <th class="p-3">XP Earned</th>
+                                <th class="p-3">Date</th>
+                                <th class="p-3 text-right">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody" class="divide-y divide-hud-border/40 text-gray-300">
+                            <tr id="emptyHistoryRow">
+                                <td colspan="5" class="p-4 text-center text-gray-500 italic">
+                                    No completed dungeons yet. Input a weak topic above to begin!
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- TEACHER DASHBOARD VIEW -->
+        <div id="teacherView" class="hidden space-y-6">
+            
+            <div class="bg-teacher-card border border-teacher-border p-6 rounded-lg shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="px-2.5 py-0.5 rounded bg-indigo-100 text-teacher-accent font-semibold text-xs font-sans">FACULTY INSIGHTS</span>
+                        <span class="text-xs text-teacher-muted font-mono">CLASSROOM: ALGEBRA & SCIENCE 101</span>
+                    </div>
+                    <h2 class="text-2xl font-bold text-teacher-text mt-1">Aggregated Skill Gap Intelligence</h2>
+                    <p class="text-sm text-teacher-muted">Real-time gap telemetry populated directly from student dungeon performance.</p>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <div class="text-right font-mono text-xs hidden sm:block">
+                        <span class="text-teacher-muted block">LIVE DATA SOURCES</span>
+                        <strong class="text-teacher-text" id="teacherStudentCount">9 Active Students</strong>
+                    </div>
+                    <button onclick="seedRandomStudentData()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-mono rounded border border-slate-300 transition-all flex items-center gap-1.5">
+                        <i class="fa-solid fa-user-plus"></i> SEED RANDOM GAP DATA
+                    </button>
+                </div>
+            </div>
+
+            <!-- Top Metric Highlights Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-teacher-card border border-teacher-border p-4 rounded-lg shadow-sm border-l-4 border-l-red-500">
+                    <span class="text-xs text-teacher-muted font-mono uppercase tracking-wider block">TOP CLASSROOM GAP</span>
+                    <h3 class="text-lg font-bold text-teacher-text mt-1 truncate" id="topGapTitle">Polynomial Factoring</h3>
+                    <div class="mt-2 text-xs font-mono text-red-600 font-semibold flex items-center justify-between">
+                        <span id="topGapCount">4 / 9 Students Affected</span>
+                        <span class="bg-red-50 px-1.5 py-0.5 rounded">HIGH PRIORITY</span>
+                    </div>
+                </div>
+
+                <div class="bg-teacher-card border border-teacher-border p-4 rounded-lg shadow-sm border-l-4 border-l-amber-500">
+                    <span class="text-xs text-teacher-muted font-mono uppercase tracking-wider block">AVG CLASS MASTERY</span>
+                    <h3 class="text-xl font-bold text-teacher-text mt-1" id="avgMasteryText">54.2%</h3>
+                    <div class="mt-2 text-xs font-mono text-amber-600 flex items-center gap-1">
+                        <i class="fa-solid fa-arrow-trend-up"></i> +8.4% from recent dungeons
+                    </div>
+                </div>
+
+                <div class="bg-teacher-card border border-teacher-border p-4 rounded-lg shadow-sm border-l-4 border-l-indigo-500">
+                    <span class="text-xs text-teacher-muted font-mono uppercase tracking-wider block">DUNGEONS COMPLETED</span>
+                    <h3 class="text-xl font-bold text-teacher-text mt-1" id="totalDungeonsCompleted">14</h3>
+                    <div class="mt-2 text-xs font-mono text-indigo-600">
+                        Across 8 practice topics
+                    </div>
+                </div>
+
+                <div class="bg-teacher-card border border-teacher-border p-4 rounded-lg shadow-sm border-l-4 border-l-emerald-500">
+                    <span class="text-xs text-teacher-muted font-mono uppercase tracking-wider block">STUDENT ENGAGEMENT</span>
+                    <h3 class="text-xl font-bold text-teacher-text mt-1">88.8%</h3>
+                    <div class="mt-2 text-xs font-mono text-emerald-600 flex items-center gap-1">
+                        <i class="fa-solid fa-circle-check"></i> Pet evolution loop active
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Teacher Analytics Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div class="lg:col-span-7 bg-teacher-card border border-teacher-border rounded-lg p-5 shadow-sm space-y-4">
+                    <div class="flex items-center justify-between border-b border-teacher-border pb-3">
+                        <div>
+                            <h3 class="font-bold text-base text-teacher-text">Class Skill Gap Distribution</h3>
+                            <p class="text-xs text-teacher-muted">Topics automatically aggregated & ranked by student impact count.</p>
+                        </div>
+                        <span class="text-xs font-mono text-indigo-600 bg-indigo-50 px-2 py-1 rounded">SORTED BY FREQUENCY</span>
+                    </div>
+
+                    <div id="aggregatedTopicsList" class="space-y-3">
+                        <!-- Rendered dynamically by JS -->
+                    </div>
+                </div>
+
+                <div class="lg:col-span-5 bg-teacher-card border border-teacher-border rounded-lg p-5 shadow-sm space-y-4">
+                    <div class="flex items-center justify-between border-b border-teacher-border pb-3">
+                        <div>
+                            <h3 class="font-bold text-base text-teacher-text">Student Roster Telemetry</h3>
+                            <p class="text-xs text-teacher-muted">Live XP progression & individual weak points.</p>
+                        </div>
+                        <span class="text-xs font-mono text-slate-500">8 MOCK + 1 LIVE</span>
+                    </div>
+
+                    <div id="studentRosterContainer" class="space-y-3 max-h-[520px] overflow-y-auto pr-1">
+                        <!-- Rendered dynamically by JS -->
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- API Key Configuration Modal -->
+    <div id="apiKeyModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-hud-card border border-hud-accent/50 w-full max-w-md rounded-lg p-6 space-y-4 font-sans hud-bracket-container shadow-2xl">
+            <div class="flex justify-between items-start">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-key text-hud-amber text-lg"></i>
+                    <h3 class="font-mono font-bold text-white text-base">Gemini API Key Settings</h3>
+                </div>
+                <button onclick="toggleApiKeyModal()" class="text-gray-400 hover:text-white">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <p class="text-xs text-gray-300">
+                Optionally enter a Google Gemini API Key to enable real-time, custom AI dungeon synthesis. If left blank, the app will use its built-in dynamic generator.
+            </p>
+
+            <div>
+                <label for="apiKeyInputField" class="block font-mono text-xs text-gray-400 uppercase tracking-wider mb-1">
+                    API Key
+                </label>
+                <input type="password" id="apiKeyInputField" placeholder="AIzaSy..." 
+                       class="w-full bg-hud-bg border border-hud-border rounded px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-hud-accent font-mono">
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="clearApiKey()" class="px-3 py-1.5 text-xs font-mono bg-hud-bg hover:bg-hud-danger/20 text-gray-300 hover:text-hud-danger border border-hud-border rounded transition-all">
+                    Clear Key
+                </button>
+                <button onclick="saveApiKey()" class="px-4 py-1.5 text-xs font-mono bg-hud-accent hover:bg-indigo-400 text-hud-bg font-bold rounded transition-all">
+                    Save Key
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const EVOLUTION_STAGES = [
+            { stage: 'egg', minXp: 0, title: 'EGG', bio: 'A dormant cognitive core awaiting academic resonance to hatch.' },
+            { stage: 'hatchling', minXp: 25, title: 'HATCHLING', bio: 'A curious spark that feeds on solved equations and scientific logic.' },
+            { stage: 'adolescent', minXp: 75, title: 'ADOLESCENT', bio: 'A nimble elemental creature sharpening its academic instincts.' },
+            { stage: 'evolved', minXp: 150, title: 'EVOLVED GUARDIAN', bio: 'A supreme mythical avatar of mastery, radiating pure knowledge.' }
+        ];
+
+        let liveStudent = {
+            id: 'stu_live_01',
+            name: 'Alex Mercer (You)',
+            isLiveUser: true,
+            xp: 0,
+            evolutionStage: 'egg',
+            weakTopics: [
+                { topic: 'Quadratic Equations', lastScore: 45, timestamp: new Date(Date.now() - 3600000 * 2).toISOString() }
+            ],
+            completedDungeons: []
+        };
+
+        let mockStudents = [
+            {
+                id: 'stu_01',
+                name: 'Maya Lin',
+                xp: 85,
+                evolutionStage: 'adolescent',
+                weakTopics: [
+                    { topic: 'Polynomial Factoring', lastScore: 38, timestamp: '2026-08-01T10:30:00Z' },
+                    { topic: 'Cellular Respiration & ATP', lastScore: 50, timestamp: '2026-07-31T14:20:00Z' }
+                ],
+                completedDungeons: [
+                    { topic: 'Polynomial Factoring', score: 3, total: 4, date: '2026-08-01' }
+                ]
+            },
+            {
+                id: 'stu_02',
+                name: 'Liam Vance',
+                xp: 40,
+                evolutionStage: 'hatchling',
+                weakTopics: [
+                    { topic: 'Polynomial Factoring', lastScore: 42, timestamp: '2026-08-01T11:15:00Z' },
+                    { topic: 'Newton\'s Laws of Motion', lastScore: 35, timestamp: '2026-07-30T09:10:00Z' }
+                ],
+                completedDungeons: [
+                    { topic: 'Newton\'s Laws of Motion', score: 2, total: 4, date: '2026-07-30' }
+                ]
+            },
+            {
+                id: 'stu_03',
+                name: 'Sophia Patel',
+                xp: 160,
+                evolutionStage: 'evolved',
+                weakTopics: [
+                    { topic: 'Cellular Respiration & ATP', lastScore: 55, timestamp: '2026-08-01T08:45:00Z' }
+                ],
+                completedDungeons: [
+                    { topic: 'Organic Chemistry Reactions', score: 4, total: 4, date: '2026-08-01' },
+                    { topic: 'Cellular Respiration & ATP', score: 4, total: 4, date: '2026-07-29' }
+                ]
+            },
+            {
+                id: 'stu_04',
+                name: 'Marcus Brody',
+                xp: 20,
+                evolutionStage: 'egg',
+                weakTopics: [
+                    { topic: 'Polynomial Factoring', lastScore: 30, timestamp: '2026-08-01T12:00:00Z' },
+                    { topic: 'French Verb Conjugation', lastScore: 48, timestamp: '2026-07-28T16:00:00Z' }
+                ],
+                completedDungeons: []
+            },
+            {
+                id: 'stu_05',
+                name: 'Elena Rostova',
+                xp: 110,
+                evolutionStage: 'adolescent',
+                weakTopics: [
+                    { topic: 'Newton\'s Laws of Motion', lastScore: 40, timestamp: '2026-07-31T18:20:00Z' }
+                ],
+                completedDungeons: [
+                    { topic: 'Vector Addition', score: 4, total: 4, date: '2026-07-31' }
+                ]
+            },
+            {
+                id: 'stu_06',
+                name: 'Noah Kim',
+                xp: 15,
+                evolutionStage: 'egg',
+                weakTopics: [
+                    { topic: 'Polynomial Factoring', lastScore: 45, timestamp: '2026-08-01T09:00:00Z' },
+                    { topic: 'Quadratic Equations', lastScore: 50, timestamp: '2026-07-27T11:30:00Z' }
+                ],
+                completedDungeons: []
+            },
+            {
+                id: 'stu_07',
+                name: 'Amara Okafor',
+                xp: 90,
+                evolutionStage: 'adolescent',
+                weakTopics: [
+                    { topic: 'French Verb Conjugation', lastScore: 40, timestamp: '2026-07-30T13:40:00Z' },
+                    { topic: 'Cellular Respiration & ATP', lastScore: 58, timestamp: '2026-07-29T10:00:00Z' }
+                ],
+                completedDungeons: [
+                    { topic: 'French Verb Conjugation', score: 3, total: 4, date: '2026-07-30' }
+                ]
+            },
+            {
+                id: 'stu_08',
+                name: 'Jackson Lee',
+                xp: 30,
+                evolutionStage: 'hatchling',
+                weakTopics: [
+                    { topic: 'Newton\'s Laws of Motion', lastScore: 45, timestamp: '2026-07-31T15:10:00Z' }
+                ],
+                completedDungeons: [
+                    { topic: 'Kinematics 1D', score: 3, total: 4, date: '2026-07-28' }
+                ]
+            }
+        ];
+
+        let activeDungeon = null;
+        let currentView = 'student';
+
+        function getSavedApiKey() {
+            return localStorage.getItem('status_window_gemini_key') || '';
+        }
+
+        function toggleApiKeyModal() {
+            const modal = document.getElementById('apiKeyModal');
+            const input = document.getElementById('apiKeyInputField');
+            input.value = getSavedApiKey();
+            modal.classList.toggle('hidden');
+        }
+
+        function saveApiKey() {
+            const input = document.getElementById('apiKeyInputField').value.trim();
+            if (input) {
+                localStorage.setItem('status_window_gemini_key', input);
+            } else {
+                localStorage.removeItem('status_window_gemini_key');
+            }
+            updateApiKeyBadge();
+            toggleApiKeyModal();
+        }
+
+        function clearApiKey() {
+            localStorage.removeItem('status_window_gemini_key');
+            document.getElementById('apiKeyInputField').value = '';
+            updateApiKeyBadge();
+            toggleApiKeyModal();
+        }
+
+        function updateApiKeyBadge() {
+            const key = getSavedApiKey();
+            const btnText = document.getElementById('apiKeyBtnText');
+            if (key) {
+                btnText.innerText = 'Key Set';
+                btnText.className = 'text-hud-success font-semibold';
+            } else {
+                btnText.innerText = 'API Key';
+                btnText.className = 'text-gray-300';
+            }
+        }
+
+        function switchView(viewName) {
+            currentView = viewName;
+            const studentView = document.getElementById('studentView');
+            const teacherView = document.getElementById('teacherView');
+            const btnStudent = document.getElementById('btnStudentView');
+            const btnTeacher = document.getElementById('btnTeacherView');
+            const appBody = document.getElementById('appBody');
+            const mainHeader = document.getElementById('mainHeader');
+
+            if (viewName === 'student') {
+                studentView.classList.remove('hidden');
+                teacherView.classList.add('hidden');
+                btnStudent.className = "px-3.5 py-1.5 rounded-md text-xs font-mono font-semibold transition-all flex items-center gap-2 bg-hud-accent text-hud-bg shadow-sm";
+                btnTeacher.className = "px-3.5 py-1.5 rounded-md text-xs font-mono font-semibold transition-all flex items-center gap-2 text-gray-400 hover:text-white";
+                appBody.className = "bg-hud-bg text-gray-100 font-sans min-h-screen transition-colors duration-300";
+                mainHeader.className = "border-b border-hud-border bg-hud-card/80 backdrop-blur-md sticky top-0 z-40 px-4 lg:px-8 py-3 transition-colors duration-300";
+            } else {
+                studentView.classList.add('hidden');
+                teacherView.classList.remove('hidden');
+                btnTeacher.className = "px-3.5 py-1.5 rounded-md text-xs font-mono font-semibold transition-all flex items-center gap-2 bg-teacher-accent text-white shadow-sm";
+                btnStudent.className = "px-3.5 py-1.5 rounded-md text-xs font-mono font-semibold transition-all flex items-center gap-2 text-gray-400 hover:text-white";
+                appBody.className = "bg-teacher-bg text-teacher-text font-sans min-h-screen transition-colors duration-300";
+                mainHeader.className = "border-b border-teacher-border bg-white backdrop-blur-md sticky top-0 z-40 px-4 lg:px-8 py-3 transition-colors duration-300";
+                renderTeacherDashboard();
+            }
+        }
+
+        function renderPetArt(stage) {
+            if (stage === 'egg') {
+                return `
+                <svg viewBox="0 0 100 100" class="w-full h-full">
+                    <defs>
+                        <linearGradient id="eggGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#7C9EFF" />
+                            <stop offset="100%" stop-color="#2A2F4A" />
+                        </linearGradient>
+                    </defs>
+                    <ellipse cx="50" cy="55" rx="28" ry="36" fill="url(#eggGrad)" stroke="#7C9EFF" stroke-width="2"/>
+                    <path d="M 35 45 Q 50 35 65 45" fill="none" stroke="#E8A33D" stroke-width="2" stroke-dasharray="3,3"/>
+                    <circle cx="50" cy="50" r="4" fill="#E8A33D" class="animate-pulse"/>
+                </svg>`;
+            } else if (stage === 'hatchling') {
+                return `
+                <svg viewBox="0 0 100 100" class="w-full h-full">
+                    <circle cx="50" cy="50" r="32" fill="#1A1D2E" stroke="#7C9EFF" stroke-width="2.5"/>
+                    <circle cx="40" cy="45" r="5" fill="#7C9EFF"/>
+                    <circle cx="60" cy="45" r="5" fill="#7C9EFF"/>
+                    <circle cx="42" cy="44" r="2" fill="#FFF"/>
+                    <circle cx="62" cy="44" r="2" fill="#FFF"/>
+                    <path d="M 45 60 Q 50 65 55 60" fill="none" stroke="#E8A33D" stroke-width="2.5" stroke-linecap="round"/>
+                    <polygon points="50,15 44,30 56,30" fill="#E8A33D"/>
+                </svg>`;
+            } else if (stage === 'adolescent') {
+                return `
+                <svg viewBox="0 0 100 100" class="w-full h-full">
+                    <polygon points="50,12 80,40 68,82 32,82 20,40" fill="#1A1D2E" stroke="#E8A33D" stroke-width="2.5"/>
+                    <circle cx="40" cy="42" r="6" fill="#E8A33D"/>
+                    <circle cx="60" cy="42" r="6" fill="#E8A33D"/>
+                    <line x1="30" y1="62" x2="70" y2="62" stroke="#7C9EFF" stroke-width="3" stroke-linecap="round"/>
+                    <polygon points="50,22 40,32 60,32" fill="#7C9EFF"/>
+                </svg>`;
+            } else {
+                return `
+                <svg viewBox="0 0 100 100" class="w-full h-full">
+                    <circle cx="50" cy="50" r="38" fill="none" stroke="#E8A33D" stroke-width="1.5" stroke-dasharray="4,2"/>
+                    <polygon points="50,8 90,50 50,92 10,50" fill="#1A1D2E" stroke="#7C9EFF" stroke-width="3"/>
+                    <circle cx="38" cy="44" r="6" fill="#7C9EFF"/>
+                    <circle cx="62" cy="44" r="6" fill="#7C9EFF"/>
+                    <polygon points="50,55 42,70 58,70" fill="#E8A33D"/>
+                    <circle cx="50" cy="24" r="4" fill="#E8A33D" class="animate-ping"/>
+                </svg>`;
+            }
+        }
+
+        function updateStudentHudUI() {
+            let currentStage = EVOLUTION_STAGES[0];
+            for (let i = EVOLUTION_STAGES.length - 1; i >= 0; i--) {
+                if (liveStudent.xp >= EVOLUTION_STAGES[i].minXp) {
+                    currentStage = EVOLUTION_STAGES[i];
+                    break;
+                }
+            }
+            liveStudent.evolutionStage = currentStage.stage;
+
+            document.getElementById('stageBadge').innerText = `STAGE: ${currentStage.title}`;
+            document.getElementById('petBio').innerText = currentStage.bio;
+            document.getElementById('petArtContainer').innerHTML = renderPetArt(currentStage.stage);
+
+            let nextThreshold = 25;
+            if (currentStage.stage === 'hatchling') nextThreshold = 75;
+            else if (currentStage.stage === 'adolescent') nextThreshold = 150;
+            else if (currentStage.stage === 'evolved') nextThreshold = 300;
+
+            document.getElementById('xpTextDisplay').innerText = `${liveStudent.xp} / ${nextThreshold} XP`;
+            const progressPercent = Math.min(100, Math.round((liveStudent.xp / nextThreshold) * 100));
+            document.getElementById('xpProgressBar').style.width = `${progressPercent}%`;
+
+            renderDungeonHistoryTable();
+        }
+
+        function renderDungeonHistoryTable() {
+            const tableBody = document.getElementById('historyTableBody');
+            const historyCountText = document.getElementById('historyCountText');
+
+            historyCountText.innerText = `${liveStudent.completedDungeons.length} Records`;
+
+            if (liveStudent.completedDungeons.length === 0) {
+                tableBody.innerHTML = `
+                    <tr id="emptyHistoryRow">
+                        <td colspan="5" class="p-4 text-center text-gray-500 italic">
+                            No completed dungeons yet. Input a weak topic above to begin!
+                        </td>
+                    </tr>`;
+                return;
+            }
+
+            tableBody.innerHTML = liveStudent.completedDungeons.map(d => `
+                <tr class="hover:bg-hud-bg/50 transition-colors">
+                    <td class="p-3 font-bold text-white">${escapeHtml(d.topic)}</td>
+                    <td class="p-3 text-hud-accent font-bold">${d.score} / ${d.questions.length}</td>
+                    <td class="p-3 text-hud-amber font-bold">+${d.score * 10} XP</td>
+                    <td class="p-3 text-gray-400">${d.date}</td>
+                    <td class="p-3 text-right">
+                        <span class="px-2 py-0.5 rounded bg-hud-success/10 text-hud-success border border-hud-success/30 text-[10px]">
+                            CLEARED
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function setPresetTopic(topic, score) {
+            document.getElementById('topicInput').value = topic;
+            document.getElementById('scoreInput').value = score;
+        }
+
+        async function handleGenerateDungeon(event) {
+            event.preventDefault();
+
+            const topic = document.getElementById('topicInput').value.trim();
+            const score = document.getElementById('scoreInput').value;
+            const count = parseInt(document.getElementById('questionCountSelect').value, 10) || 4;
+
+            if (!topic) return;
+
+            document.getElementById('dungeonSection').classList.remove('hidden');
+            document.getElementById('dungeonLoading').classList.remove('hidden');
+            document.getElementById('dungeonActive').classList.add('hidden');
+            document.getElementById('dungeonResults').classList.add('hidden');
+            document.getElementById('loadingTopicText').innerText = `SYNTHESIZING: ${topic.toUpperCase()}...`;
+
+            document.getElementById('dungeonSection').scrollIntoView({ behavior: 'smooth' });
+
+            const apiKey = getSavedApiKey();
+
+            if (apiKey) {
+                document.getElementById('loadingSubtext').innerText = 'Contacting Gemini 3 Flash to construct custom AI challenges...';
+                try {
+                    const questions = await fetchGeminiDungeonQuestions(topic, score, count, apiKey);
+                    activeDungeon = {
+                        topic: topic,
+                        lastScore: score ? parseInt(score, 10) : null,
+                        questions: sanitizeQuestions(questions),
+                        generatedAt: new Date().toISOString()
+                    };
+                    addOrUpdateStudentWeakTopic(liveStudent, topic, score ? parseInt(score, 10) : 40);
+                    renderActiveDungeon(activeDungeon);
+                    return;
+                } catch (err) {
+                    console.warn('Gemini API fetch failed, switching to dynamic topic synthesis engine:', err);
+                }
+            }
+
+            // Fallback to dynamic topic synthesis engine
+            document.getElementById('loadingSubtext').innerText = 'Generating targeted practice set...';
+            setTimeout(() => {
+                const dynamicQuestions = generateSmartFallbackQuestions(topic, count);
+                activeDungeon = {
+                    topic: topic,
+                    lastScore: score ? parseInt(score, 10) : null,
+                    questions: sanitizeQuestions(dynamicQuestions),
+                    generatedAt: new Date().toISOString()
+                };
+                addOrUpdateStudentWeakTopic(liveStudent, topic, score ? parseInt(score, 10) : 40);
+                renderActiveDungeon(activeDungeon);
+            }, 600);
+        }
+
+        async function fetchGeminiDungeonQuestions(topic, recentScore, count, apiKey) {
+            const systemPrompt = "You are an expert academic tutor. Generate short, self-contained practice questions specifically targeting student misconceptions in the given topic. Return ONLY a JSON array of objects.";
+            
+            const userPrompt = `Generate exactly ${count} multiple-choice practice questions for a student struggling with the topic: "${topic}". ${recentScore ? `The student's recent score was ${recentScore}%.` : ''} 
+
+Provide output strictly as a JSON array of objects with these exact keys:
+[
+  {
+    "question": "Clear question text here",
+    "options": ["Option A", "Option B", "Option C", "Option D"],
+    "correctAnswer": 0,
+    "explanation": "Brief clear explanation of why this answer is correct."
+  }
+]
+Note: "correctAnswer" MUST be an integer representing the 0-based index of the correct option in the "options" array.`;
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`;
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: userPrompt }] }],
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                    generationConfig: {
+                        temperature: 0.3,
+                        responseMimeType: "application/json"
+                    }
+                })
+            });
+
+            if (!response.ok) throw new Error(`API HTTP Error: ${response.status}`);
+
+            const data = await response.json();
+            const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+            if (!textResponse) throw new Error("Empty response from Gemini API");
+
+            let cleanedText = textResponse.trim();
+            if (cleanedText.startsWith("```")) {
+                cleanedText = cleanedText.replace(/^```(json)?/, '').replace(/```$/, '').trim();
+            }
+
+            const parsed = JSON.parse(cleanedText);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                return parsed;
+            } else {
+                throw new Error("Invalid JSON structure received");
+            }
+        }
+
+        // Guarantees correctAnswer is standard 0-based index number
+        function sanitizeQuestions(questions) {
+            return questions.map(q => {
+                let correctIdx = 0;
+
+                if (typeof q.correctAnswer === 'number') {
+                    correctIdx = Math.max(0, Math.min(q.options.length - 1, q.correctAnswer));
+                } else if (typeof q.correctAnswer === 'string') {
+                    const parsedNum = parseInt(q.correctAnswer, 10);
+                    if (!isNaN(parsedNum) && parsedNum >= 0 && parsedNum < q.options.length) {
+                        correctIdx = parsedNum;
+                    } else {
+                        // Letter matching (A/B/C/D) or exact text string matching
+                        const letterMap = { 'a': 0, 'b': 1, 'c': 2, 'd': 3 };
+                        const lowerAns = q.correctAnswer.trim().toLowerCase();
+                        if (letterMap[lowerAns] !== undefined && letterMap[lowerAns] < q.options.length) {
+                            correctIdx = letterMap[lowerAns];
+                        } else {
+                            const foundIndex = q.options.findIndex(opt => opt.toLowerCase().trim() === lowerAns);
+                            if (foundIndex !== -1) correctIdx = foundIndex;
+                        }
+                    }
+                }
+
+                return {
+                    question: q.question || "Topic Diagnostic Question",
+                    options: q.options || ["Option 1", "Option 2", "Option 3", "Option 4"],
+                    correctAnswer: correctIdx,
+                    explanation: q.explanation || "Review fundamental formulas and relationships associated with this topic."
+                };
+            });
+        }
+
+        // Smart domain-aware fallback question generator with randomized correct choices
+        function generateSmartFallbackQuestions(topic, count) {
+            const lower = topic.toLowerCase();
+            let templates = [];
+
+            if (lower.includes('factor') || lower.includes('quadr') || lower.includes('algebra') || lower.includes('equation') || lower.includes('math')) {
+                templates = [
+                    {
+                        question: `When solving equations or expressions in ${topic}, what is the correct first step?`,
+                        options: [
+                            `Identify common factors or isolate the principal variable term`,
+                            `Square both sides immediately without simplifying`,
+                            `Set all coefficient values equal to 1`,
+                            `Remove negative signs automatically`
+                        ],
+                        explanation: `Always identify key components or terms before attempting expansion or division.`
+                    },
+                    {
+                        question: `Which common algebraic error should be avoided during ${topic}?`,
+                        options: [
+                            `Forgetting to distribute negative signs across grouped terms`,
+                            `Simplifying fractions before adding them`,
+                            `Double-checking calculations using substitution`,
+                            `Factoring out the greatest common factor first`
+                        ],
+                        explanation: `A very frequent mistake is failing to distribute signs across parentheses.`
+                    },
+                    {
+                        question: `How can you verify if your solution for a ${topic} problem is accurate?`,
+                        options: [
+                            `Substitute the resulting answer back into the original equation to check equality`,
+                            `Multiply the answer by 10 and verify it is a whole number`,
+                            `Assume the highest magnitude number is correct`,
+                            `Graph only positive quadrant points`
+                        ],
+                        explanation: `Plugging values back into original equations guarantees correctness.`
+                    },
+                    {
+                        question: `In ${topic}, what occurs if the main coefficient or discriminant equals zero?`,
+                        options: [
+                            `The degree of the equation simplifies, altering the expected root count`,
+                            `The entire expression becomes infinitely large`,
+                            `All variables evaluate to zero simultaneously`,
+                            `The equation produces complex roots only`
+                        ],
+                        explanation: `When leading coefficients vanish, quadratic expressions reduce to linear relationships.`
+                    }
+                ];
+            } else if (lower.includes('cell') || lower.includes('atp') || lower.includes('bio') || lower.includes('chem') || lower.includes('photo')) {
+                templates = [
+                    {
+                        question: `What primary role does ${topic} serve within biological or chemical systems?`,
+                        options: [
+                            `Facilitating metabolic energy transfer or cellular transformations`,
+                            `Preventing molecular movement across cellular membranes`,
+                            `Synthesizing structural lipids only`,
+                            `Eliminating nitrogenous waste through passive diffusion`
+                        ],
+                        explanation: `Cellular energetics rely directly on metabolic pathways to power biological functions.`
+                    },
+                    {
+                        question: `Where does the primary reaction phase of ${topic} occur?`,
+                        options: [
+                            `In specialized cellular organelles such as mitochondria or chloroplasts`,
+                            `Exclusively outside the organism in extracellular matrix`,
+                            `Inside nuclear chromatin pores`,
+                            `In cellular ribosomes during protein folding`
+                        ],
+                        explanation: `Key reactions occur within organelle membranes containing targeted enzyme complexes.`
+                    },
+                    {
+                        question: `What is the crucial substrate or chemical yield linked with ${topic}?`,
+                        options: [
+                            `Adenosine Triphosphate (ATP) or metabolic equivalents`,
+                            `Sodium chloride crystals`,
+                            `Inert atmospheric nitrogen`,
+                            `Heavy metals`
+                        ],
+                        explanation: `Metabolic pathways convert chemical potential energy into usable ATP molecules.`
+                    },
+                    {
+                        question: `How does oxygen or reactant availability impact ${topic}?`,
+                        options: [
+                            `Depletion shifts process pathways from aerobic efficiency to anaerobic yield`,
+                            `It causes immediate cellular dissolution`,
+                            `Reaction speed doubles infinitely`,
+                            `Energy production remains 100% constant regardless of inputs`
+                        ],
+                        explanation: `Anaerobic environments force systems to utilize alternative fermentation routes.`
+                    }
+                ];
+            } else {
+                templates = [
+                    {
+                        question: `What core principle is essential for mastering ${topic}?`,
+                        options: [
+                            `Understanding structural rules and relationships between components`,
+                            `Memorizing disconnected facts without structural analysis`,
+                            `Skipping foundational definitions`,
+                            `Assuming rules apply identically in every single edge case`
+                        ],
+                        explanation: `Mastery requires understanding core structural principles.`
+                    },
+                    {
+                        question: `What is a frequent point of confusion when learning ${topic}?`,
+                        options: [
+                            `Misapplying specific rules in modified or non-standard contexts`,
+                            `Over-analyzing simple definitions`,
+                            `Verifying answers against known baseline standards`,
+                            `Breaking complex problems down into step-by-step procedures`
+                        ],
+                        explanation: `Contextual application requires careful attention to active constraints.`
+                    },
+                    {
+                        question: `Which approach is most effective when practicing ${topic}?`,
+                        options: [
+                            `Working through practice problems and analyzing mistake patterns`,
+                            `Rereading formulas passively without active solving`,
+                            `Relying on guesswork for complex scenarios`,
+                            `Avoiding challenging question variants`
+                        ],
+                        explanation: `Active retrieval practice builds deep cognitive retention.`
+                    },
+                    {
+                        question: `When analyzing a complex scenario in ${topic}, what should you do first?`,
+                        options: [
+                            `Break down given conditions and identify key target parameters`,
+                            `Jump straight to final assumptions without reading given parameters`,
+                            `Ignore initial constraints`,
+                            `Combine unrelated concepts randomly`
+                        ],
+                        explanation: `Always identify known inputs and expected outputs first.`
+                    }
+                ];
+            }
+
+            // Shuffle options for each template so correct answer is not always index 0
+            const shuffledQuestions = templates.slice(0, count).map(t => {
+                const optionsWithIndices = t.options.map((opt, idx) => ({ text: opt, originalIndex: idx }));
+                
+                // Fisher-Yates shuffle
+                for (let i = optionsWithIndices.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [optionsWithIndices[i], optionsWithIndices[j]] = [optionsWithIndices[j], optionsWithIndices[i]];
+                }
+
+                const correctNewIndex = optionsWithIndices.findIndex(o => o.originalIndex === 0);
+
+                return {
+                    question: t.question,
+                    options: optionsWithIndices.map(o => o.text),
+                    correctAnswer: correctNewIndex,
+                    explanation: t.explanation
+                };
+            });
+
+            return shuffledQuestions;
+        }
+
+        function renderActiveDungeon(dungeon) {
+            document.getElementById('dungeonLoading').classList.add('hidden');
+            document.getElementById('dungeonActive').classList.remove('hidden');
+
+            document.getElementById('activeDungeonTitle').innerText = dungeon.topic;
+            document.getElementById('questionCounterText').innerText = `0 / ${dungeon.questions.length}`;
+            document.getElementById('xpValuedText').innerText = `+${dungeon.questions.length * 10} XP`;
+
+            const container = document.getElementById('questionsContainer');
+            container.innerHTML = dungeon.questions.map((q, qIndex) => `
+                <div class="bg-hud-bg p-4 sm:p-5 rounded border border-hud-border space-y-3 font-sans">
+                    <div class="flex items-start gap-3">
+                        <span class="font-mono text-xs font-bold px-2 py-1 rounded bg-hud-accent/20 text-hud-accent border border-hud-accent/30">
+                            Q${qIndex + 1}
+                        </span>
+                        <p class="text-sm sm:text-base font-semibold text-white pt-0.5">${escapeHtml(q.question)}</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                        ${q.options.map((opt, oIndex) => `
+                            <label class="option-card cursor-pointer block">
+                                <input type="radio" name="question_${qIndex}" value="${oIndex}" class="sr-only" onchange="checkQuizProgress()">
+                                <div class="option-content p-3.5 rounded border border-hud-border bg-hud-card hover:border-hud-accent/60 transition-all flex items-start gap-3">
+                                    <div class="radio-dot w-4 h-4 rounded-full border border-gray-500 mt-0.5 shrink-0 transition-all"></div>
+                                    <span class="text-xs sm:text-sm text-gray-200 leading-snug">
+                                        ${escapeHtml(opt)}
+                                    </span>
+                                </div>
+                            </label>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function checkQuizProgress() {
+            if (!activeDungeon) return;
+            let answered = 0;
+            for (let i = 0; i < activeDungeon.questions.length; i++) {
+                const selected = document.querySelector(`input[name="question_${i}"]:checked`);
+                if (selected) answered++;
+            }
+            document.getElementById('questionCounterText').innerText = `${answered} / ${activeDungeon.questions.length}`;
+        }
+
+        function gradeDungeonSubmission() {
+            if (!activeDungeon) return;
+
+            let correctCount = 0;
+            const total = activeDungeon.questions.length;
+            const detailedResults = [];
+
+            for (let i = 0; i < total; i++) {
+                const selected = document.querySelector(`input[name="question_${i}"]:checked`);
+                const questionObj = activeDungeon.questions[i];
+                const correctIdx = questionObj.correctAnswer;
+                let userSelectedIdx = -1;
+
+                if (selected) {
+                    userSelectedIdx = parseInt(selected.value, 10);
+                }
+
+                const isCorrect = (userSelectedIdx === correctIdx);
+                if (isCorrect) correctCount++;
+
+                detailedResults.push({
+                    questionText: questionObj.question,
+                    options: questionObj.options,
+                    correctIdx: correctIdx,
+                    userSelectedIdx: userSelectedIdx,
+                    isCorrect: isCorrect,
+                    explanation: questionObj.explanation
+                });
+            }
+
+            const xpGained = correctCount * 10;
+            const oldStage = liveStudent.evolutionStage;
+
+            liveStudent.xp += xpGained;
+
+            const record = {
+                topic: activeDungeon.topic,
+                questions: activeDungeon.questions,
+                score: correctCount,
+                date: new Date().toISOString().split('T')[0]
+            };
+            liveStudent.completedDungeons.unshift(record);
+
+            updateStudentHudUI();
+
+            const newStage = liveStudent.evolutionStage;
+            const evolved = oldStage !== newStage;
+
+            document.getElementById('dungeonActive').classList.add('hidden');
+            document.getElementById('dungeonResults').classList.remove('hidden');
+
+            document.getElementById('resultScoreText').innerText = `${correctCount} / ${total} (${Math.round((correctCount/total)*100)}%)`;
+            document.getElementById('resultXpText').innerText = `+${xpGained} XP`;
+
+            renderResultsBreakdown(detailedResults);
+
+            const evolutionNotice = document.getElementById('evolutionNotice');
+            if (evolved) {
+                evolutionNotice.classList.remove('hidden');
+            } else {
+                evolutionNotice.classList.add('hidden');
+            }
+
+            activeDungeon = null;
+        }
+
+        function renderResultsBreakdown(results) {
+            const container = document.getElementById('resultsBreakdownContainer');
+            container.innerHTML = results.map((res, qIdx) => {
+                const userChoiceText = res.userSelectedIdx >= 0 ? res.options[res.userSelectedIdx] : 'No answer selected';
+                const correctChoiceText = res.options[res.correctIdx];
+
+                return `
+                <div class="p-4 rounded bg-hud-bg border ${res.isCorrect ? 'border-hud-success/50' : 'border-hud-danger/50'} space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="font-mono text-xs font-bold ${res.isCorrect ? 'text-hud-success' : 'text-hud-danger'} flex items-center gap-1.5">
+                            <i class="fa-solid ${res.isCorrect ? 'fa-circle-check' : 'fa-circle-xmark'}"></i>
+                            Q${qIdx + 1}: ${res.isCorrect ? 'CORRECT' : 'INCORRECT'}
+                        </span>
+                    </div>
+
+                    <p class="text-xs sm:text-sm font-semibold text-white">${escapeHtml(res.questionText)}</p>
+
+                    <div class="text-xs font-mono space-y-1 pt-1">
+                        <div class="text-gray-300">
+                            Your Answer: <span class="${res.isCorrect ? 'text-hud-success font-bold' : 'text-hud-danger line-through'}">${escapeHtml(userChoiceText)}</span>
+                        </div>
+                        ${!res.isCorrect ? `
+                            <div class="text-hud-success">
+                                Correct Answer: <span class="font-bold">${escapeHtml(correctChoiceText)}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    ${res.explanation ? `
+                        <p class="text-[11px] text-gray-400 font-sans italic bg-hud-card p-2 rounded border border-hud-border/40 mt-1">
+                            <i class="fa-solid fa-lightbulb text-hud-amber mr-1"></i> ${escapeHtml(res.explanation)}
+                        </p>
+                    ` : ''}
+                </div>`;
+            }).join('');
+        }
+
+        function cancelActiveDungeon() {
+            activeDungeon = null;
+            document.getElementById('dungeonSection').classList.add('hidden');
+        }
+
+        function resetToDungeonInput() {
+            document.getElementById('dungeonSection').classList.add('hidden');
+            document.getElementById('weakPointForm').reset();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function addOrUpdateStudentWeakTopic(student, topicName, lastScore) {
+            const existing = student.weakTopics.find(t => t.topic.toLowerCase() === topicName.toLowerCase());
+            if (existing) {
+                existing.lastScore = lastScore;
+                existing.timestamp = new Date().toISOString();
+            } else {
+                student.weakTopics.push({
+                    topic: topicName,
+                    lastScore: lastScore,
+                    timestamp: new Date().toISOString()
+                });
+            }
+        }
+
+        function renderTeacherDashboard() {
+            const allStudents = [liveStudent, ...mockStudents];
+            document.getElementById('teacherStudentCount').innerText = `${allStudents.length} Active Students`;
+
+            const topicAggMap = {};
+
+            allStudents.forEach(stu => {
+                stu.weakTopics.forEach(wt => {
+                    const key = wt.topic.trim();
+                    if (!topicAggMap[key]) {
+                        topicAggMap[key] = {
+                            topic: key,
+                            count: 0,
+                            totalScore: 0,
+                            students: []
+                        };
+                    }
+                    topicAggMap[key].count += 1;
+                    topicAggMap[key].totalScore += (wt.lastScore || 40);
+                    topicAggMap[key].students.push({
+                        name: stu.name,
+                        score: wt.lastScore || 40,
+                        isLiveUser: !!stu.isLiveUser
+                    });
+                });
+            });
+
+            const sortedTopics = Object.values(topicAggMap).sort((a, b) => b.count - a.count);
+
+            if (sortedTopics.length > 0) {
+                const topGap = sortedTopics[0];
+                document.getElementById('topGapTitle').innerText = topGap.topic;
+                document.getElementById('topGapCount').innerText = `${topGap.count} / ${allStudents.length} Students Affected`;
+            }
+
+            let sumScores = 0;
+            let totalEntries = 0;
+            sortedTopics.forEach(t => {
+                sumScores += t.totalScore;
+                totalEntries += t.count;
+            });
+            const overallAvg = totalEntries > 0 ? (sumScores / totalEntries).toFixed(1) : '54.0';
+            document.getElementById('avgMasteryText').innerText = `${overallAvg}%`;
+
+            const totalDungeons = allStudents.reduce((acc, s) => acc + (s.completedDungeons ? s.completedDungeons.length : 0), 0);
+            document.getElementById('totalDungeonsCompleted').innerText = totalDungeons;
+
+            const aggregatedList = document.getElementById('aggregatedTopicsList');
+            aggregatedList.innerHTML = sortedTopics.map((t, idx) => {
+                const avgScore = Math.round(t.totalScore / t.count);
+                const impactPercentage = Math.round((t.count / allStudents.length) * 100);
+
+                return `
+                <div class="p-4 bg-slate-50 border border-teacher-border rounded-lg hover:border-indigo-300 transition-all space-y-3">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="w-5 h-5 rounded-full bg-indigo-600 text-white font-mono text-xs flex items-center justify-center font-bold">
+                                    ${idx + 1}
+                                </span>
+                                <h4 class="font-bold text-sm text-teacher-text">${escapeHtml(t.topic)}</h4>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3 font-mono text-xs">
+                            <span class="px-2 py-1 rounded bg-red-100 text-red-700 font-semibold">
+                                ${t.count} Students (${impactPercentage}%)
+                            </span>
+                            <span class="text-teacher-muted">AVG SCORE: <strong class="text-teacher-text">${avgScore}%</strong></span>
+                        </div>
+                    </div>
+
+                    <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                        <div class="bg-indigo-600 h-full rounded-full" style="width: ${impactPercentage}%"></div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-1.5 pt-1">
+                        <span class="text-[11px] font-mono text-teacher-muted mr-1">STUCK STUDENTS:</span>
+                        ${t.students.map(s => `
+                            <span class="text-xs px-2 py-0.5 rounded border ${s.isLiveUser ? 'bg-amber-50 text-amber-800 border-amber-300 font-bold' : 'bg-white text-slate-700 border-slate-200'}">
+                                ${escapeHtml(s.name)} (${s.score}%)
+                            </span>
+                        `).join('')}
+                    </div>
+                </div>`;
+            }).join('');
+
+            renderStudentRoster(allStudents);
+        }
+
+        function renderStudentRoster(students) {
+            const container = document.getElementById('studentRosterContainer');
+            container.innerHTML = students.map(s => {
+                const topWeak = s.weakTopics && s.weakTopics.length > 0 ? s.weakTopics[0].topic : 'None';
+
+                return `
+                <div class="p-3 bg-slate-50 border border-teacher-border rounded-lg flex items-center justify-between hover:bg-slate-100/80 transition-colors">
+                    <div class="space-y-0.5">
+                        <div class="flex items-center gap-2">
+                            <h5 class="text-xs font-bold text-teacher-text ${s.isLiveUser ? 'text-indigo-600' : ''}">
+                                ${escapeHtml(s.name)}
+                            </h5>
+                            ${s.isLiveUser ? '<span class="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.2 rounded font-mono font-bold">YOU</span>' : ''}
+                        </div>
+                        <p class="text-[11px] text-teacher-muted truncate max-w-[200px]">
+                            Weakness: <span class="text-slate-800 font-medium">${escapeHtml(topWeak)}</span>
+                        </p>
+                    </div>
+
+                    <div class="text-right font-mono">
+                        <span class="text-xs font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-800 block">
+                            ${s.xp} XP
+                        </span>
+                        <span class="text-[10px] text-teacher-muted uppercase font-semibold">
+                            ${s.evolutionStage}
+                        </span>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function seedRandomStudentData() {
+            const names = ['Chloe Bennett', 'Ethan Brooks', 'Zara Ahmed', 'Gabriel Torres', 'Hannah Abbott'];
+            const topics = ['Polynomial Factoring', 'Cellular Respiration & ATP', 'Newton\'s Laws of Motion', 'French Verb Conjugation', 'Quadratic Equations'];
+
+            const randomName = names[Math.floor(Math.random() * names.length)];
+            const randomTopic = topics[Math.floor(Math.random() * topics.length)];
+            const randomScore = Math.floor(Math.random() * 30) + 30;
+
+            mockStudents.push({
+                id: `stu_${Date.now()}`,
+                name: randomName,
+                xp: Math.floor(Math.random() * 80),
+                evolutionStage: 'hatchling',
+                weakTopics: [
+                    { topic: randomTopic, lastScore: randomScore, timestamp: new Date().toISOString() }
+                ],
+                completedDungeons: []
+            });
+
+            renderTeacherDashboard();
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function initApp() {
+            updateApiKeyBadge();
+            updateStudentHudUI();
+            renderTeacherDashboard();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp);
+        } else {
+            initApp();
+        }
+    </script>
+</body>
+</html>
